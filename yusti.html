@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Borondo por el Sabor Caleño</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- FUENTES: Poppins (títulos) e Inter (cuerpo) -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Configuración de Tailwind para usar colores y fuentes personalizadas -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'maroon-900': '#6A0E30',
+                        'yellow-400': '#FFDC3E',
+                        'yellow-100': '#FFF4D6',
+                        'frame-dark': '#3A071E',
+                        'frame-light': '#D9D9D9',
+                    },
+                    fontFamily: {
+                        title: ['Poppins', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Carga de Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root{
+            --maroon-900: #6A0E30;
+            --yellow-400: #FFDC3E;
+            --yellow-100: #FFF4D6;
+            --frame-dark: #3A071E;
+            --frame-light: #D9D9D9;
+        }
+        /* Estilos generales */
+        body {
+            background-color: var(--maroon-900);
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none; /* Previene el "rebote" en iOS */
+        }
+        .title-font {
+            font-family: 'Poppins', 'sans-serif';
+            letter-spacing: -0.025em;
+        }
+        /* Estilo del Marco de la Postal */
+        .illustration-frame-container {
+            background-color: var(--yellow-100);
+            border-radius: 1rem;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 0 10px var(--maroon-900), 0 10px 20px rgba(0,0,0,0.4);
+            border: 8px solid white;
+            transition: border 0.3s ease, box-shadow 0.3s ease;
+        }
+        .editor-mode .illustration-frame-container:hover {
+            box-shadow: inset 0 0 0 10px var(--maroon-900), 0 10px 20px rgba(0,0,0,0.5);
+            border: 8px solid var(--yellow-400);
+            cursor: pointer;
+        }
+        .edit-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none; /* Para que el clic llegue al contenedor */
+        }
+        .editor-mode .illustration-frame-container:hover .edit-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .illustration-frame-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        /* Estilo para el botón de inicio */
+        #start-button {
+            background-color: var(--yellow-100);
+            color: var(--maroon-900);
+            border-radius: 9999px;
+            font-family: 'Poppins', 'sans-serif';
+            font-weight: 900;
+        }
+        /* Modal oculto (no se usa) */
+        #modal-overlay { display: none; }
+        /* Gemini styles (reemplazando llamadas a theme()) */
+        .gemini-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background-color: var(--maroon-900);
+            border: 2px solid var(--yellow-400);
+            color: var(--yellow-400);
+            border-radius: 9999px;
+            font-family: 'Poppins', 'sans-serif';
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .gemini-button:hover { background-color: var(--yellow-400); color: var(--maroon-900); }
+        .gemini-button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .gemini-icon { display: inline-block; animation: sparkle 1.5s infinite; }
+        @keyframes sparkle { 0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.3);opacity:0.7;} }
+        .gemini-result {
+            background-color: rgba(255,255,255,0.04);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            color: var(--yellow-100);
+            font-size: 1rem;
+            line-height: 1.6;
+            border: 1px solid rgba(255,220,62,0.12);
+            display: none;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen">
+
+    <div id="app" class="min-h-screen flex flex-col max-w-lg mx-auto bg-maroon-900 shadow-2xl">
+        <!-- Encabezado Fijo -->
+        <header id="app-header" class="sticky top-0 z-20 p-4 flex justify-between items-center bg-maroon-900/90 backdrop-blur-sm shadow-xl border-b border-white/20 hidden">
+            <h1 id="header-title" class="text-3xl title-font font-black text-white tracking-widest">
+                <span class="text-yellow-400">Borondo</span> Caleño
+            </h1>
+            <button
+                id="back-button"
+                class="text-white/70 hover:text-white transition duration-300 p-2 rounded-full hidden"
+                aria-label="Volver"
+            >
+                <i data-lucide="arrow-left" class="w-6 h-6"></i>
+            </button>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main id="main-content" class="flex-grow p-4 pb-24 overflow-y-auto">
+            <div id="screen-container" class="max-w-3xl mx-auto">
+                <!-- El contenido de la pantalla se inyecta aquí por JS -->
+            </div>
+        </main>
+
+        <!-- Navegación Inferior Fija (Visible en móvil) -->
+        <div
+            id="menu-buttons"
+            class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-20 p-4 bg-maroon-900 border-t border-white/20 shadow-2xl flex justify-around hidden"
+        >
+            <button id="nav-menu" class="flex flex-col items-center p-2 rounded-lg transition duration-300 text-yellow-400 bg-white/10">
+                <i data-lucide="utensils" class="w-6 h-6"></i>
+                <span class="text-xs mt-1 font-sans">Menú</span>
+            </button>
+
+            <button id="nav-music" class="flex flex-col items-center p-2 rounded-lg transition duration-300 text-white/70 hover:text-white">
+                <i data-lucide="music" class="w-6 h-6"></i>
+                <span class="text-xs mt-1 font-sans">Música</span>
+            </button>
+        </div>
+
+        <!-- Modal de Avisos (Oculto) -->
+        <div id="modal-overlay" class="hidden">
+            <div id="modal-content">
+                <h2 id="modal-title" class="text-2xl title-font font-bold mb-4">Aviso</h2>
+                <p id="modal-message" class="mb-6"></p>
+                <button id="modal-close-button" class="bg-maroon-900 text-white px-6 py-2 rounded-full title-font font-bold transition hover:bg-opacity-80">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de la Aplicación -->
+    <script>
+        // --- Variables de Entorno ---
+        // Lógica de permisos: IS_EDITOR solo será true en el entorno de edición.
+        const IS_EDITOR = typeof __is_editor !== 'undefined' ? __is_editor : false;
+
+        // --- Configuraciones de API de Gemini ---
+        const apiKey = ""; // La clave se proporcionará en el entorno de ejecución
+        const LLM_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const MAX_RETRIES = 5;
+
+        // IDs de las imágenes que has subido
+        const IMAGEN_CRISTO_REY = 'uploaded:ilustracion de cali.jpg-07d261fd-177d-4887-82d0-9a593204e52c';
+        const IMAGEN_SABORES_PENON = 'uploaded:Ilustración_sin_título 14.jpg-bfd64ca5-f0a7-4df6-9e7d-987431fbd64c';
+        const IMAGEN_CAMINO_LUNA = 'uploaded:Ilustración_sin_título 1.jpg-f85ffe7c-ca37-4d16-adf8-27ce238887c1';
+
+        // --- Estado de la Aplicación ---
+        let navigationStack = []; // Pila para manejar el historial de navegación
+
+        const showModal = (title, message) => {
+            // El modal de aviso ha sido deshabilitado para no molestar.
+            console.warn(`AVISO (Oculto): ${title} - ${message}`);
+        };
+
+        const getFileUrl = (fileId, dishName = '', placeName = '') => {
+            if (fileId && fileId.startsWith('uploaded:')) {
+                if (typeof getUploadedFileUrl === 'function') {
+                    try {
+                        return getUploadedFileUrl(fileId);
+                    } catch(e) {
+                        console.error("Error al llamar a getUploadedFileUrl:", e);
+                        return 'https://placehold.co/800x600/FFDC3E/6A0E30?text=Error+Cargando+Imagen';
+                    }
+                } else {
+                    console.warn("getUploadedFileUrl no está disponible en este entorno (Vista Previa).");
+                    return 'https://placehold.co/800x600/FFDC3E/6A0E30?text=VISTA+PREVIA';
+                }
+            }
+            const text = encodeURIComponent(`Postal de ${dishName}`);
+            return `https://placehold.co/800x600/6A0E30/FFDC3E?text=${text}`;
+        };
+
+        // --- Llamadas a la API de Gemini (LLM) ---
+        const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        let text = await response.text();
+                        try { text = JSON.parse(text); } catch(e){}
+                        console.error("Error en API:", text);
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        };
+
+        const callGemini = async (prompt) => {
+            if (!apiKey) {
+                console.warn('LLM API key no proporcionada — simulando respuesta.');
+                return "(Simulado) Leyenda o maridaje: Mirá, este plato se nace en las lomas, oís.";
+            }
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: "Eres un experto en gastronomía y cultura de Cali, Colombia. Respondes con un tono caleño amigable, poético y alegre. Usas palabras locales como 'mirá', 'oís', 've'. Tus respuestas son siempre cortas y directas (máximo 3 frases)." }] },
+            };
+
+            try {
+                const result = await fetchWithRetry(LLM_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) throw new Error('Respuesta de API vacía.');
+                return text;
+            } catch (error) {
+                console.error('Error llamando a la API de Gemini:', error);
+                return "¡Uy, oís! Se me chispoteó la idea. Intenta de nuevo, ve.";
+            }
+        };
+
+        // --- Datos del Menú (Estructura completa) ---
+        let dishData = {
+            welcome: "Bienvenido a",
+            title: "Borondo por el Sabor Caleño",
+            slogan: "Colecciona sabores, guarda memorias.",
+            sections: [
+                { id: 'fuertes', name: "El Corazón del Valle", description: "(Platos Fuertes)" },
+                { id: 'entradas', name: "Bocao de Bienvenida", description: "(Entradas)" },
+                { id: 'sandwiches', name: "Pan y Conversa", description: "(Sándwiches)" },
+                { id: 'desayunos', name: "Entre el Sol y el Tinto", description: "(Desayunos)" },
+                { id: 'postres', name: "Pa' Endulzar el Alma", description: "(Postres)" },
+                { id: 'horneados', name: "Calor de Hogar", description: "(Horneados)" },
+                { id: 'sopas', name: "Soplo de Brisa y Tierra", description: "(Cremas y sopas)" },
+            ],
+            dishes: {
+                'stroganoff': { section: 'fuertes', place: "Mirador Cristo Rey", name: "Lomito stroganoff", description: "Lomito en salsa cremosa de champiñones al estilo de la casa.", imageFile: IMAGEN_CRISTO_REY },
+                'rollito': { section: 'fuertes', place: "Colina San Antonio", name: "Rollito de pollo", description: "Pechuga de pollo rellena con queso y tocineta bañada en salsa suave.", imageFile: null },
+                'cazuela': { section: 'fuertes', place: "Bruma del Pacífico", name: "Cazuela de mariscos", description: "Cazuela cremosa con mariscos en su punto.", imageFile: null },
+                'fettuccine': { section: 'fuertes', place: "Loma de la Cruz", name: "Fettuccine al funghi", description: "Fettuccine en salsa de champiñones con toque de vino blanco.", imageFile: null },
+                'chaufa': { section: 'fuertes', place: "Juanchito Salteado", name: "Arroz chaufa", description: "Arroz salteado con pollo, verduras y salsa oriental.", imageFile: null },
+                'chaufaveggie': { section: 'fuertes', place: "Farallones Verdes", name: "Arroz chaufa veggie", description: "Arroz chaufa vegetariano con vegetales frescos de temporada.", imageFile: null },
+                'costillas': { section: 'fuertes', place: "Fuego Panamericano", name: "Costillas de la casa", description: "Costillas horneadas en salsa dulce y especiada.", imageFile: null },
+                'ceviche': { section: 'entradas', place: "Brisa de Cristo Rey", name: "Ceviche de camarón", description: "Ceviche de camarón con toque cítrico y especias del Pacífico.", imageFile: null },
+                'deditos': { section: 'entradas', place: "Deditos del Río Boulevard", name: "Dedos de queso", description: "Dedos de queso crocante acompañados de salsa artesanal.", imageFile: null },
+                'empanadas': { section: 'entradas', place: "Empanadas del Viejo San Antonio", name: "Empanadas de carne", description: "Empanadas tradicionales de carne con ají de la casa.", imageFile: null },
+                'papas': { section: 'entradas', place: "Papas del Río Cali", name: "Papas a la francesa", description: "Papas a la francesa sazonadas con especias y salsas especiales.", imageFile: null },
+                'picada': { section: 'entradas', place: "Banquete del Mirador", name: "Picada de chicharrón", description: "Picada de chicharrón y acompañantes para compartir.", imageFile: null },
+                'steak': { section: 'sandwiches', place: "Vacile Fino", name: "Steak sándwich", description: "Finas láminas de lomo viche, cebolla caramelizada, lechuga romana, chile dulce y tomates cherry asados en pan ciabatta.", imageFile: null },
+                'pollo': { section: 'sandwiches', place: "Borondo Dorado", name: "Pollo crocante", description: "Filete de pollo apanado con panko, ralladura de panela, aguacate y cebolla morada curada en pan ciabatta con chipotle y miel.", imageFile: null },
+                'tostadas': { section: 'desayunos', place: "Despertar San Antonio", name: "Tostadas francesas", description: "Tostadas francesas con frutas frescas, mermelada y yogurt griego.", imageFile: null },
+                'scrambled': { section: 'desayunos', place: "Amanecer del Peñón", name: "Scrambled eggs", description: "Pan brioche con huevos revueltos cremosos y tocineta.", imageFile: null },
+                'salmon': { section: 'desayunos', place: "Bruma del Boulevard", name: "Huevo y salmón", description: "Pan brioche con salmón curado, aguacate y huevo pochado.", imageFile: null },
+                'jamon': { section: 'desayunos', place: "Alba del Oeste", name: "Jamón y nueces", description: "Pan brioche con queso crema, jamón serrano y rúgula.", imageFile: null },
+                'mozarella': { section: 'desayunos', place: "Sol del Valle", name: "Mozarella y tomate", description: "Pan brioche con tomate cherry asado, mozzarella y pesto.", imageFile: null },
+                'champi': { section: 'desayunos', place: "Loma Serena", name: "Champiñón y pistachos", description: "Pan brioche con hongos salteados y rúgula.", imageFile: null },
+                'huerto': { section: 'desayunos', place: "Verde San Fernando", name: "Del huerto", description: "Pan brioche con aguacate, espinaca y huevo frito.", imageFile: null },
+                'calentao': { section: 'desayunos', place: "Desvelo Caleño", name: "Calentao de la casa", description: "Fríjoles, chicharrón, tajadas y huevo frito.", imageFile: null },
+                'canastas': { section: 'desayunos', place: "Tradición Dorada", name: "Canastas de maíz", description: "Canastas de maíz doradas rellenas de carne y pollo.", imageFile: null },
+                'opera': { section: 'postres', place: "Melodía Negra", name: "Ópera de chocolate", description: "Capas de bizcocho y ganache de chocolate.", imageFile: null },
+                'toffee': { section: 'postres', place: "Dulce Borondo", name: "Sticky Toffee", description: "Bizcocho tibio con salsa toffee y helado.", imageFile: null },
+                'tarta': { section: 'postres', place: "Lo que Diga el Corazón", name: "Tarta de queso con frutos rojos", description: "Cheesecake con frutos rojos frescos.", imageFile: null },
+                'milhoja': { section: 'postres', place: "Besito de Azúcar", name: "Milhoja de la casa", description: "Milhoja crocante con crema pastelera.", imageFile: null },
+                'torta': { section: 'postres', place: "Cali Dulce", name: "Torta de temporada", description: "Torta según la temporada de frutas locales.", imageFile: null },
+                'croissant': { section: 'horneados', place: "Sabores del Peñón", name: "Croissant queso", description: "Croissant relleno de queso fundido.", imageFile: IMAGEN_SABORES_PENON },
+                'panchoco': { section: 'horneados', place: "Camino de Luna", name: "Pan de chocolate", description: "Pan artesanal con relleno de chocolate.", imageFile: IMAGEN_CAMINO_LUNA },
+                'pandebono': { section: 'horneados', place: "Aroma del Valle", name: "Pandebonos / waffles de pandebono", description: "Pandebonos o waffles servidos con arequipe o mermelada.", imageFile: null },
+                'sancocho': { section: 'sopas', place: "Sabor de Tradición", name: "Sancocho de Gallina", description: "Sancocho de gallina tradicional del Valle del Cauca.", imageFile: null },
+            }
+        };
+
+        // --- Lógica de Renderizado (Plantillas HTML) ---
+        const renderWelcomeScreen = () => `
+            <div class="flex flex-col items-center justify-center text-center text-white min-h-[70vh] space-y-8 animate-fade-in">
+                <h2 class="text-2xl title-font">${dishData.welcome}</h2>
+                <h1 class="text-6xl title-font font-black tracking-tighter">${dishData.title}</h1>
+                <p class="text-lg max-w-md text-yellow-100/80">
+                    Cada plato incluye una postal ilustrada que cuenta su historia. Disfruta, colecciona y descubre la cultura caleña.
+                </p>
+                <button 
+                    id="start-button" 
+                    class="px-10 py-4 text-xl title-font font-bold rounded-full shadow-lg transition duration-300 transform hover:scale-105"
+                    data-target="menu"
+                >
+                    Haz click aquí para iniciar tu viaje
+                </button>
+                <p class="text-lg title-font text-yellow-100/90 italic pt-8">${dishData.slogan}</p>
+            </div>
+        `;
+
+        const renderMenuScreen = () => `
+            <div class="space-y-4 animate-fade-in">
+                <h2 class="text-4xl title-font font-bold text-center text-white mb-8">
+                    ${dishData.title}
+                </h2>
+                ${dishData.sections.map(section => `
+                    <button 
+                        class="w-full p-6 bg-maroon-900 border-2 border-yellow-400/30 rounded-2xl shadow-lg text-left transition duration-300 transform hover:scale-[1.02] hover:border-yellow-400"
+                        data-target="category"
+                        data-id="${section.id}"
+                    >
+                        <h3 class="text-3xl title-font font-bold text-white">${section.name}</h3>
+                        <p class="text-lg text-yellow-100/70">${section.description}</p>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+
+        const renderCategoryScreen = (sectionId) => {
+            const section = dishData.sections.find(s => s.id === sectionId) || { name: '' };
+            const dishesInSection = Object.entries(dishData.dishes)
+                .filter(([id, dish]) => dish.section === sectionId)
+                .map(([id, dish]) => ({ id, ...dish }));
+
+            return `
+                <div class="animate-fade-in">
+                    <h2 class="text-4xl title-font font-bold text-center text-white mb-2">${section.name}</h2>
+                    <p class="text-xl text-center text-yellow-100/70 mb-8">${section.description}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${dishesInSection.map(dish => {
+                            const hasImage = !!dish.imageFile;
+                            const bgColor = hasImage ? 'bg-yellow-100' : 'bg-maroon-900';
+                            const textColor = hasImage ? 'text-maroon-900' : 'text-white';
+                            const placeColor = hasImage ? 'text-maroon-900/70' : 'text-yellow-400';
+                            return `
+                                <button 
+                                    class="w-full p-5 ${bgColor} border-2 border-yellow-400/30 rounded-2xl shadow-lg text-left transition duration-300 transform hover:scale-[1.02] hover:border-yellow-400"
+                                    data-target="dish"
+                                    data-id="${dish.id}"
+                                >
+                                    <h4 class="text-lg title-font font-bold ${placeColor}">${dish.place}</h4>
+                                    <h3 class="text-2xl title-font font-bold ${textColor}">${dish.name}</h3>
+                                </button>
+                            `
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderDishDetailScreen = (dishId) => {
+            const dish = dishData.dishes[dishId];
+            if (!dish) return `\n                <div class="text-white">Plato no encontrado.</div>\n            `;
+
+            const imageUrl = getFileUrl(dish.imageFile, dish.name, dish.place);
+            const editorClass = IS_EDITOR ? 'editor-mode' : '';
+
+            return `
+                <div class="animate-fade-in space-y-6 ${editorClass}">
+                    <div class="text-center">
+                        <h3 class="text-2xl title-font font-bold text-yellow-400">${dish.place}</h3>
+                        <h2 class="text-5xl title-font font-black text-white">${dish.name}</h2>
+                    </div>
+                    <div id="image-frame-container" 
+                         class="illustration-frame-container aspect-square md:aspect-[4/3] w-full max-w-md mx-auto"
+                         data-dish-id="${dishId}"
+                         title="${IS_EDITOR ? 'Haz clic para cambiar la ilustración' : 'Postal ilustrada del plato'}">
+                        <img id="dish-image" src="${imageUrl}" alt="Ilustración de ${dish.name}"
+                             onerror="this.src='https://placehold.co/800x600/6A0E30/FFDC3E?text=Error+al+cargar+imagen'; this.onerror=null;" />
+                        <div class="edit-overlay">
+                            <i data-lucide="image-plus" class="w-12 h-12 text-white/80"></i>
+                            <span class="text-white text-lg font-bold title-font mt-2">Cambiar Ilustración</span>
+                        </div>
+                    </div>
+                    ${IS_EDITOR ? `
+                        <button id="upload-image-button" 
+                                class="flex items-center justify-center w-full max-w-md mx-auto gap-2 px-6 py-3 bg-yellow-400 text-maroon-900 rounded-full title-font font-bold text-lg transition duration-300 transform hover:scale-105"
+                                data-dish-id="${dishId}">
+                            <i data-lucide="upload" class="w-5 h-5"></i>
+                            Subir/Cambiar Ilustración
+                        </button>
+                    ` : ''}
+                    <div class="max-w-md mx-auto space-y-6">
+                        <p class="text-xl text-white/90 text-center">${dish.description}</p>
+                        <div class="space-y-4">
+                            <button class="gemini-button w-full" data-prompt-type="leyenda" data-dish-name="${dish.name}" data-dish-place="${dish.place}">
+                                <span class="gemini-icon">✨</span> Generar Leyenda Histórica
+                            </button>
+                            <div id="leyenda-result" class="gemini-result"></div>
+
+                            <button class="gemini-button w-full" data-prompt-type="maridaje" data-dish-name="${dish.name}" data-dish-description="${dish.description}">
+                                <span class="gemini-icon">✨</span> Sugerencia de Acompañamiento
+                            </button>
+                            <div id="maridaje-result" class="gemini-result"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderMusicScreen = () => `
+            <div class="text-center text-white space-y-8 animate-fade-in">
+                <i data-lucide="music" class="w-24 h-24 mx-auto text-yellow-400"></i>
+                <h2 class="text-4xl title-font font-bold">Música en este Borondo</h2>
+                <p class="text-lg text-yellow-100/80 max-w-md mx-auto">
+                    En este link encuentras la playlist de Spotify del restaurante. Agrega tus canciones favoritas que representan a Cali.
+                </p>
+                <a href="https://open.spotify.com/playlist/60ITwCNfovJv0wqQ4ly4VB?si=ec3ad7c252dc4351" 
+                   target="_blank" 
+                   class="inline-block px-10 py-4 text-xl title-font font-bold rounded-full shadow-lg transition duration-300 transform hover:scale-105 bg-green-500 text-white">
+                    Ir a la Playlist de Spotify
+                </a>
+            </div>
+        `;
+
+        // --- Navegación y Control ---
+        const screenContainer = document.getElementById('screen-container');
+        const header = document.getElementById('app-header');
+        const headerTitle = document.getElementById('header-title');
+        const backButton = document.getElementById('back-button');
+        const menuButtons = document.getElementById('menu-buttons');
+
+        const navigateTo = (screen, id = null, isBack = false) => {
+            let content = '';
+            const currentState = getCurrentScreen();
+            if (!isBack && currentState.screen) navigationStack.push(currentState);
+
+            switch (screen) {
+                case 'welcome':
+                    content = renderWelcomeScreen();
+                    header.classList.add('hidden');
+                    menuButtons.classList.add('hidden');
+                    break;
+                case 'menu':
+                    content = renderMenuScreen();
+                    header.classList.remove('hidden');
+                    menuButtons.classList.remove('hidden');
+                    headerTitle.innerHTML = `<span class="text-yellow-400">Borondo</span> Caleño`;
+                    break;
+                case 'category':
+                    content = renderCategoryScreen(id);
+                    header.classList.remove('hidden');
+                    menuButtons.classList.remove('hidden');
+                    const section = dishData.sections.find(s => s.id === id);
+                    headerTitle.textContent = section ? section.name : '';
+                    break;
+                case 'dish':
+                    content = renderDishDetailScreen(id);
+                    header.classList.remove('hidden');
+                    menuButtons.classList.remove('hidden');
+                    const dish = dishData.dishes[id];
+                    headerTitle.textContent = dish ? dish.name : '';
+                    break;
+                case 'music':
+                    content = renderMusicScreen();
+                    header.classList.remove('hidden');
+                    menuButtons.classList.remove('hidden');
+                    headerTitle.textContent = "Música";
+                    break;
+                default:
+                    content = renderWelcomeScreen();
+                    header.classList.add('hidden');
+                    menuButtons.classList.add('hidden');
+            }
+
+            screenContainer.innerHTML = content;
+            if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+
+            if (navigationStack.length > 0) {
+                backButton.classList.remove('hidden');
+            } else {
+                backButton.classList.add('hidden');
+            }
+
+            window.scrollTo(0, 0);
+        };
+
+        const getCurrentScreen = () => {
+            if (header.classList.contains('hidden')) return { screen: 'welcome', id: null };
+            const title = headerTitle.textContent || '';
+            if (title === 'Música') return { screen: 'music', id: null };
+            const section = dishData.sections.find(s => s.name === title);
+            if (section) return { screen: 'category', id: section.id };
+            const dish = Object.entries(dishData.dishes).find(([id, d]) => d.name === title);
+            if (dish) return { screen: 'dish', id: dish[0] };
+            return { screen: 'menu', id: null };
+        };
+
+        const handleBack = () => {
+            if (navigationStack.length > 0) {
+                const lastState = navigationStack.pop();
+                navigateTo(lastState.screen, lastState.id, true);
+            }
+        };
+
+        const attachEventListeners = () => {
+            const app = document.getElementById('app');
+
+            app.addEventListener('click', async (e) => {
+                const targetButton = e.target.closest('button, a');
+                if (!targetButton) return;
+
+                if (targetButton.dataset.target) {
+                    e.preventDefault();
+                    navigateTo(targetButton.dataset.target, targetButton.dataset.id);
+                }
+
+                if (targetButton.id === 'back-button') handleBack();
+                if (targetButton.id === 'nav-menu') navigateTo('menu');
+                if (targetButton.id === 'nav-music') navigateTo('music');
+                if (targetButton.id === 'upload-image-button') handleImageUploadClick(targetButton.dataset.dishId);
+
+                const frame = e.target.closest('#image-frame-container');
+                if (IS_EDITOR && frame) handleImageUploadClick(frame.dataset.dishId);
+
+                if (targetButton.classList.contains('gemini-button')) await handleGeminiClick(targetButton);
+            });
+        };
+
+        const handleImageUploadClick = (dishId) => {
+            const uploader = typeof uploadFile === 'function' ? uploadFile : (typeof window.uploadFile === 'function' ? window.uploadFile : null);
+
+            if (IS_EDITOR && uploader) {
+                uploader()
+                    .then(file => {
+                        if (file && file.contentFetchId) {
+                            dishData.dishes[dishId].imageFile = file.contentFetchId;
+                            alert(`¡Imagen Actualizada!\n\nEl nuevo ID es: ${file.contentFetchId}\n\nLa página se recargará para mostrar el cambio.`);
+                            navigateTo('dish', dishId, true);
+                        }
+                    })
+                    .catch(error => {
+                        if (error && error.message && error.message.includes("cancelled")) {
+                            console.log("Subida de archivo cancelada por el usuario.");
+                        } else {
+                            console.error("Error al subir el archivo:", error);
+                            alert(`Ocurrió un error al subir: ${error && error.message ? error.message : error}`);
+                        }
+                    });
+            } else if (IS_EDITOR) {
+                console.warn("ERROR DE ENTORNO (Editor): La función 'uploadFile' no está disponible en esta 'Vista Previa'.");
+            }
+        };
+
+        const handleGeminiClick = async (button) => {
+            const promptType = button.dataset.promptType;
+            const dishName = button.dataset.dishName;
+            const dishPlace = button.dataset.dishPlace;
+            const dishDescription = button.dataset.dishDescription;
+
+            let prompt = "";
+            let resultContainerId = "";
+
+            if (promptType === 'leyenda') {
+                prompt = `Creá una leyenda o historia folclórica muy corta (2 frases) sobre por qué el plato '${dishName}' se asocia con el lugar '${dishPlace}' en Cali.`;
+                resultContainerId = 'leyenda-result';
+            } else if (promptType === 'maridaje') {
+                prompt = `Mirá, ve, ¿con qué bebida o acompañamiento típico de Cali me recomendás este plato? Plato: '${dishName}', Descripción: '${dishDescription}'. Responde corto, oís.`;
+                resultContainerId = 'maridaje-result';
+            }
+
+            const resultContainer = document.getElementById(resultContainerId);
+            if (!resultContainer) return;
+
+            const originalText = resultContainer.textContent;
+            button.disabled = true;
+            resultContainer.style.display = 'block';
+            resultContainer.innerHTML = '<span style="color:var(--yellow-400)">Pensando, oís...</span>';
+
+            const responseText = await callGemini(prompt);
+
+            resultContainer.textContent = responseText;
+            button.disabled = false;
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            attachEventListeners();
+            navigateTo('welcome');
+        });
+    </script>
+    <!-- === QR: pegar justo antes de </body> === -->
+<!-- Librería QR desde CDN -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+
+<style>
+  /* Botón flotante y modal QR (usa tus variables CSS) */
+  #qr-toggle-btn{
+    position:fixed; right:1rem; bottom:1rem; z-index:60;
+    padding:.6rem .8rem; border-radius:9999px;
+    background:var(--yellow-400); color:var(--maroon-900);
+    font-weight:700; border:none; box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  #qr-modal{
+    position:fixed; right:1rem; bottom:5.6rem; z-index:60;
+    background: rgba(255,255,255,0.04); border-radius:.75rem;
+    padding:.75rem; display:none; align-items:center; justify-content:center;
+    gap:.5rem; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  #qr-modal canvas{ width:220px; height:220px; display:block; }
+  #qr-modal .qr-caption{ font-size:.9rem; color:var(--yellow-100); margin-top:.4rem; }
+</style>
+
+<!-- Contenedor del QR -->
+<div id="qr-modal" aria-hidden="true">
+  <canvas id="qrcode-canvas" width="300" height="300"></canvas>
+  <div class="qr-caption">Escaneá para abrir esta página</div>
+</div>
+
+<script>
+  const qrCanvas = document.getElementById('qrcode-canvas');
+  const qrModal  = document.getElementById('qr-modal');
+
+  async function generateQR(url){
+    try {
+      await QRCode.toCanvas(qrCanvas, url, { width: 300, margin: 1 });
+    } catch (err){
+      console.error('Error generando QR:', err);
+    }
+  }
+
+  // Botón flotante
+  const btn = document.createElement('button');
+  btn.id = 'qr-toggle-btn';
+  btn.type = 'button';
+  btn.title = 'Mostrar QR';
+  btn.innerText = 'QR';
+  document.body.appendChild(btn);
+
+  btn.addEventListener('click', async () => {
+    if (qrModal.style.display === 'flex') {
+      qrModal.style.display = 'none';
+      qrModal.setAttribute('aria-hidden','true');
+    } else {
+      qrModal.style.display = 'flex';
+      qrModal.setAttribute('aria-hidden','false');
+      // Cambiá aquí si querés apuntar a otra URL:
+      await generateQR(window.location.href);
+      // Ejemplo fijo: await generateQR('https://tu-dominio.com/mi-pagina');
+    }
+  });
+
+  // Click fuera para cerrar (opcional)
+  document.addEventListener('click', (e) => {
+    if (!qrModal.contains(e.target) && e.target !== btn) {
+      qrModal.style.display = 'none';
+      qrModal.setAttribute('aria-hidden','true');
+    }
+  });
+</script>
+<!-- === fin QR === -->
+
+</body>
+</html>
